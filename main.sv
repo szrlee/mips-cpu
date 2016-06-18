@@ -9,17 +9,21 @@
 
 module main(
     input wire clk_board,
-    output wire clk_cpu,
+    input wire stop,
+    output wire display_clk_cpu,
 	output reg [6 : 0] display_data,
     output reg [7 : 0] display_en,
     output reg [14 : 0] LED//display_pc
     );
-    wire clk_led;
-    wire [31 : 0] display_syscall;
+    wire clk_led, clk_cpu;
+    wire [31 : 0] display_7segs;
+    
+    assign display_clk_cpu = stop == 1'b1 ? 1'b0 : clk_cpu;
     CPU CPU_MOD(
         .clk            (clk_cpu),
-        .display_syscall(display_syscall),
-        .display_pc     (LED)
+        .stop           (stop),
+        .display_7segs  (display_7segs),
+        .display_led    (LED)
         );
     Clk CLK_MOD(
         .clk_board(clk_board),
@@ -29,7 +33,7 @@ module main(
       	
     led LED_MOD(
         .clk         (clk_led),
-        .in_data     (display_syscall),
+        .in_data     (display_7segs),
         .display_data(display_data),
         .display_en  (display_en)
         );

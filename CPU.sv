@@ -18,10 +18,12 @@
 
 module CPU(
 	input wire clk,
-	output reg [31 : 0] display_syscall,
-	output wire [14 : 0] display_pc
+	input wire stop,
+	output reg [31 : 0] display_7segs,
+	output wire [14 : 0] display_led
 );
 	reg rst = 1'b1;
+	reg [31 : 0] display_syscall;
  	wire ExtOp, RegDst, RegWrite, MemRead, MemWrite, MemtoReg, JalSrc, SyscallSrc, halt;
 	wire Equal; 
 	wire [1 : 0] Branch, Jump, AluSrc;
@@ -34,11 +36,12 @@ module CPU(
     wire [31 : 0] regfile_read_data1, regfile_read_data2, alu_src_out1, alu_src_out2;
     wire [15 : 0 ] immediate;
     wire [25 : 0 ] j_address;
-    assign display_pc = {cycles_counter[6 : 0], pc_out[7 : 0]};
+    assign display_led = {cycles_counter[6 : 0], pc_out[7 : 0]};
 	assign rs_syscall = SyscallSrc == 1'b1 ? 5'd2 : rs;
 	assign rt_syscall = SyscallSrc == 1'b1 ? 5'd4 : rt; 
-	assign halt = SyscallSrc == 1'b1 ? (regfile_read_data1 == 32'd10 ? 1'b1 : 1'b0) : 1'b0;
-
+	assign halt = stop == 1'b1 ? 1'b1 : (SyscallSrc == 1'b1 ? (regfile_read_data1 == 32'd10 ? 1'b1 : 1'b0) : 1'b0);
+    assign display_7segs = stop == 1'b1 ? cycles_counter : display_syscall;
+    
   	always_ff @(posedge clk) begin 
 		rst <= 1'b0;
 		if(SyscallSrc == 1'b1) begin
