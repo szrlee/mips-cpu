@@ -15,25 +15,30 @@
 `include "RF.sv"
 `include "Ext.sv"
 `include "ALUSrc.sv"
+`include "Debug_DM.sv"
 
 module CPU(
 	input wire clk,
 	input wire stop,
-	output reg [31 : 0] display_7segs,
+	input wire Debug_DM,
+	input wire [9 : 0] switch_in,
+	output wire [31 : 0] display_7segs,
 	output wire [14 : 0] display_led,
 	output wire display_clk_cpu
 );
 	reg rst = 1'b1;
 	reg [31 : 0] display_syscall;
- 	wire ExtOp, RegDst, RegWrite, MemRead, MemWrite, MemtoReg, JalSrc, SyscallSrc, halt;
-	wire Equal; 
+	wire [31 : 0] display_DM;
+ 	wire ExtOp, RegDst, RegWrite, MemRead, MemWrite, MemtoReg, JalSrc, SyscallSrc, halt, DM_MemRead, DM_MemWrite;
+	wire Equal;
+	wire Debug_DM_en;
 	wire [1 : 0] Branch, Jump, AluSrc;
 	wire [5 : 0] opcode, funct;
 	wire [2 : 0] AluOp;
 	wire [4 : 0] rs, rt, rd, shamt, regfile_write_num, rs_syscall, rt_syscall;
 	wire [31 : 0] pc_out, read, cycles_counter;
 	wire [3 : 0] alu_control_op_out;
-	wire [31 : 0] pc_src_out, ext_immidiate, alu_out, mem_out, regfile_write_data;
+	wire [31 : 0] pc_src_out, ext_immidiate, alu_out, mem_out, regfile_write_data, addr_in;
     wire [31 : 0] regfile_read_data1, regfile_read_data2, alu_src_out1, alu_src_out2;
     wire [15 : 0 ] immediate;
     wire [25 : 0 ] j_address;
@@ -41,8 +46,10 @@ module CPU(
 	assign rs_syscall = SyscallSrc == 1'b1 ? 5'd2 : rs;
 	assign rt_syscall = SyscallSrc == 1'b1 ? 5'd4 : rt; 
 	assign halt = stop == 1'b1 ? 1'b1 : (SyscallSrc == 1'b1 ? (regfile_read_data1 == 32'd10 ? 1'b1 : 1'b0) : 1'b0);
-    assign display_7segs = stop == 1'b1 ? cycles_counter : display_syscall;
-    assign display_clk_cpu = halt == 1'b1 ? 1'b0 : clk;
+    assign display_7segs = stop == 1'b1 ? (Debug_DM_en == 1'b1 ? display_DM : cycles_counter) : display_syscall;
+    assign display_clk_cpu = halt == 1'b1 ? (Debug_DM_en == 1'b1 ? 1'b1 : 1'b0) : clk;
+    assign Debug_DM_en = stop & Debug_DM;
+    assign display_DM = mem_out;
 
   	always_ff @(posedge clk) begin 
 		rst <= 1'b0;
@@ -53,7 +60,6 @@ module CPU(
 		else display_syscall <= display_syscall;	
   	end
   	
-
 	PC PC_MOD(
 		.clk (clk),
 		.rst (rst),
@@ -169,13 +175,24 @@ module CPU(
 		);
 	// DM DM_MOD(alu_out, regfile_read_data2, MemRead, MemWrite, clk, mem_out);
 	DM DM_MOD(
-		.addr_in   (alu_out),
+		.addr_in   (addr_in),
 		.write_data(regfile_read_data2),
-		.MemRead   (MemRead),
-		.MemWrite  (MemWrite),
+		.MemRead   (DM_MemRead),
+		.MemWrite  (DM_MemWrite),
 		.clk       (clk),
 		.out       (mem_out)
 		);
+		
+  	Debug_DM DEBUG_DM_MOD(
+        .alu_out  (alu_out),
+        .MemRead  (MemRead),
+        .MemWrite (MemWrite),
+        .Debug_DM_en (Debug_DM_en),
+        .switch_in (switch_in),
+        .addr_in   (addr_in),
+        .DM_MemRead   (DM_MemRead),
+        .DM_MemWrite  (DM_MemWrite)
+        );
 
 endmodule
 

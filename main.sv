@@ -10,6 +10,8 @@
 module main(
     input wire clk_board,
     input wire stop,
+    input wire Debug_DM,
+    input wire [9 : 0] switch_in,
     output wire display_clk_cpu,
 	output reg [6 : 0] display_data,
     output reg [7 : 0] display_en,
@@ -21,6 +23,8 @@ module main(
     CPU CPU_MOD(
         .clk            (clk_cpu),
         .stop           (stop),
+        .Debug_DM       (Debug_DM),
+        .switch_in      (switch_in),
         .display_7segs  (display_7segs),
         .display_led    (LED),
         .display_clk_cpu(display_clk_cpu)

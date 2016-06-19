@@ -16,7 +16,7 @@ module DM(
 	always_comb begin
 		if(MemRead == 1'b1) out = data[addr];
 		else out = 32'bz;
-	end	
+	end
 	
 	always_ff @(negedge clk) begin
 		if(MemWrite == 1'b1) begin
