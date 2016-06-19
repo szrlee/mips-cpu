@@ -18,12 +18,12 @@ module main(
     wire clk_led, clk_cpu;
     wire [31 : 0] display_7segs;
     
-    assign display_clk_cpu = stop == 1'b1 ? 1'b0 : clk_cpu;
     CPU CPU_MOD(
         .clk            (clk_cpu),
         .stop           (stop),
         .display_7segs  (display_7segs),
-        .display_led    (LED)
+        .display_led    (LED),
+        .display_clk_cpu(display_clk_cpu)
         );
     Clk CLK_MOD(
         .clk_board(clk_board),

@@ -20,7 +20,8 @@ module CPU(
 	input wire clk,
 	input wire stop,
 	output reg [31 : 0] display_7segs,
-	output wire [14 : 0] display_led
+	output wire [14 : 0] display_led,
+	output wire display_clk_cpu
 );
 	reg rst = 1'b1;
 	reg [31 : 0] display_syscall;
@@ -41,7 +42,8 @@ module CPU(
 	assign rt_syscall = SyscallSrc == 1'b1 ? 5'd4 : rt; 
 	assign halt = stop == 1'b1 ? 1'b1 : (SyscallSrc == 1'b1 ? (regfile_read_data1 == 32'd10 ? 1'b1 : 1'b0) : 1'b0);
     assign display_7segs = stop == 1'b1 ? cycles_counter : display_syscall;
-    
+    assign display_clk_cpu = halt == 1'b1 ? 1'b0 : clk;
+
   	always_ff @(posedge clk) begin 
 		rst <= 1'b0;
 		if(SyscallSrc == 1'b1) begin
