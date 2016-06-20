@@ -12,7 +12,7 @@ module main(
     input wire stop,
     input wire Debug_DM,
     input wire [9 : 0] switch_in,
-    output wire display_clk_cpu,
+    output wire clk_cpu,
 	output reg [6 : 0] display_data,
     output reg [7 : 0] display_en,
     output reg [14 : 0] LED//display_pc
@@ -27,12 +27,13 @@ module main(
         .switch_in      (switch_in),
         .display_7segs  (display_7segs),
         .display_led    (LED),
-        .display_clk_cpu(display_clk_cpu)
+        //.display_clk_cpu(display_clk_cpu)
         );
     Clk CLK_MOD(
-        .clk_board(clk_board),
-        .clk_cpu  (clk_cpu),
-        .clk_led  (clk_led)
+        .stop       (stop),
+        .clk_board  (clk_board),
+        .clk_cpu    (clk_cpu),
+        .clk_led    (clk_led)
         );	
       	
     led LED_MOD(
