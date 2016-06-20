@@ -26,7 +26,7 @@ module main(
         .Debug_DM       (Debug_DM),
         .switch_in      (switch_in),
         .display_7segs  (display_7segs),
-        .display_led    (LED),
+        .display_led    (LED)
         //.display_clk_cpu(display_clk_cpu)
         );
     Clk CLK_MOD(

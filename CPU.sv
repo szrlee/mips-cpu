@@ -33,7 +33,7 @@ module CPU(
 );
 	reg rst = 1'b1;
 	reg [31 : 0] display_syscall;
-	wire [31 : 0] display_DM;
+	wire [31 : 0] display_DM, cycles_counter;
 	// pc signal
 	wire [31 : 0] pc_if, pc_if_id, pc_id_ex, pc_ex_mem, pc_mem_wb;
 
@@ -69,7 +69,7 @@ module CPU(
 	wire Debug_DM_en;
 
 	// sign extention
-	wire [31 : 0]ext_immediate_id, ext_immediate_id_ex
+	wire [31 : 0]ext_immediate_id, ext_immediate_id_ex;
 
 	// regfile
 	reg [4 : 0] regfile_read_num1_syscall_id;
@@ -130,7 +130,7 @@ module CPU(
     assign display_DM = ram_read_data_mem;
 
   	// EX display cycles & pc
-  	assign display_led = {cycles_counter[6 : 0], pc_if[7 : 0];
+  	assign display_led = {Debug_DM_en, cycles_counter[5 : 0], pc_if[7 : 0]};
   	
 	// IF
 	PC PC_MOD(
@@ -139,7 +139,7 @@ module CPU(
 		.halt	(halt_ex),
 		.in		(pc_src_out_ex),
 		.out	(pc_if),
-		.pc_bj 	(pc_src_bj_ex)
+		.pc_bj 	(pc_src_bj_ex),
 		.cycles_counter (cycles_counter)
 	);
 
