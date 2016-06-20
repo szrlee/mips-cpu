@@ -4,6 +4,7 @@
 `include "def.vh"
 
 module Clk(
+	input wire stop,
 	input wire clk_board,
 	output reg clk_cpu = 1'b0,
 	output reg clk_led = 1'b0
@@ -11,10 +12,15 @@ module Clk(
 	
 	reg [31 : 0] i = 32'd0;
 	always_ff @(posedge clk_board) begin
-		i <= i + 32'd1;
-		if(i == 32'd4999999) begin
-			i <= 32'd0;
-			clk_cpu <= ~clk_cpu;
+		if (stop == 1'b1) begin
+			clk_cpu <= clk_cpu;
+		end
+		else begin
+			i <= i + 32'd1;
+			if(i == 32'd4999999) begin
+				i <= 32'd0;
+				clk_cpu <= ~clk_cpu;
+			end
 		end
 	end
 

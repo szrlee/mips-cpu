@@ -23,8 +23,8 @@ module CPU(
 	input wire Debug_DM,
 	input wire [9 : 0] switch_in,
 	output wire [31 : 0] display_7segs,
-	output wire [14 : 0] display_led,
-	output wire display_clk_cpu
+	output wire [14 : 0] display_led
+	//output wire display_clk_cpu
 );
 	reg rst = 1'b1;
 	reg [31 : 0] display_syscall;
@@ -42,12 +42,12 @@ module CPU(
     wire [31 : 0] regfile_read_data1, regfile_read_data2, alu_src_out1, alu_src_out2;
     wire [15 : 0 ] immediate;
     wire [25 : 0 ] j_address;
-    assign display_led = {cycles_counter[6 : 0], pc_out[7 : 0]};
+    assign display_led = {Debug_DM_en, cycles_counter[5 : 0], pc_out[7 : 0]};
 	assign rs_syscall = SyscallSrc == 1'b1 ? 5'd2 : rs;
 	assign rt_syscall = SyscallSrc == 1'b1 ? 5'd4 : rt; 
-	assign halt = stop == 1'b1 ? 1'b1 : (SyscallSrc == 1'b1 ? (regfile_read_data1 == 32'd10 ? 1'b1 : 1'b0) : 1'b0);
+	assign halt = SyscallSrc == 1'b1 ? (regfile_read_data1 == 32'd10 ? 1'b1 : 1'b0) : 1'b0;
     assign display_7segs = stop == 1'b1 ? (Debug_DM_en == 1'b1 ? display_DM : cycles_counter) : display_syscall;
-    assign display_clk_cpu = halt == 1'b1 ? (Debug_DM_en == 1'b1 ? 1'b1 : 1'b0) : clk;
+    //assign display_clk_cpu = halt == 1'b1 ? (Debug_DM_en == 1'b1 ? 1'b1 : 1'b0) : clk;
     assign Debug_DM_en = stop & Debug_DM;
     assign display_DM = mem_out;
 
