@@ -17,7 +17,7 @@ module main(
     output reg [7 : 0] display_en,
     output reg [14 : 0] LED//display_pc
     );
-    wire clk_led, clk_cpu;
+    wire clk_led;
     wire [31 : 0] display_7segs;
     
     CPU CPU_MOD(

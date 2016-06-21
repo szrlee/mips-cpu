@@ -63,14 +63,11 @@ module CPU(
 	wire SyscallSrc_id, SyscallSrc_id_ex;
 
 	// sign extention
-	wire [31 : 0]ext_immediate_id, ext_immediate_id_ex;
+	wire [31 : 0] ext_immediate_id, ext_immediate_id_ex;
 
  	wire DM_MemRead, DM_MemWrite;
 	wire Debug_DM_en;
-
-	// sign extention
-	wire [31 : 0]ext_immediate_id, ext_immediate_id_ex;
-
+    wire [31 : 0] addr_in;
 	// regfile
 	reg [4 : 0] regfile_read_num1_syscall_id;
 	reg [4 : 0] regfile_read_num2_syscall_id;
@@ -218,7 +215,7 @@ module CPU(
 	Ext EXT_MOD(
 		.in  (immediate_id),
 		.ExtOp (ExtOp_id),
-		.out (ext_immidiate_id)
+		.out (ext_immediate_id)
 	);
 
 	// ID -> EX

@@ -6,7 +6,8 @@
 
 module IM(
 	input wire [31 : 0] pc_if,
-	output wire [31 : 0] instruction_if);
+	output wire [31 : 0] instruction_if
+	);
 	wire [7 : 0] num;
 	reg [31 : 0] data [255 : 0];
 	initial begin
