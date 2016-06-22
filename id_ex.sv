@@ -22,6 +22,8 @@ module id_ex(
 	input wire [31 : 0] read_data2_id,
 	input wire [31 : 0] instruction_if_id,
 	input wire halt_ex,
+	input wire [4 : 0] regfile_read_num1_syscall_id,
+	input wire [4 : 0] regfile_read_num2_syscall_id,
 	input wire [4 : 0] regfile_write_num_id,
 	input wire nop_lock_id,
 	input wire pc_bj,
@@ -42,7 +44,9 @@ module id_ex(
 	output reg [31 : 0] read_data1_id_ex = 0,
 	output reg [31 : 0] read_data2_id_ex = 0,
 	output reg [31 : 0] instruction_id_ex = 0,
-	output reg [4 : 0] regfile_write_num_id_ex = 0
+	output reg [4 : 0] regfile_write_num_id_ex = 0,
+	output reg [4 : 0] regfile_read_num1_syscall_id_ex = 0,
+	output reg [4 : 0] regfile_read_num2_syscall_id_ex = 0
     );
 	
 	always_ff @(posedge clk) begin
@@ -65,6 +69,8 @@ module id_ex(
 			MemtoReg_id_ex <= 0;
 			read_data2_id_ex <= 0;
 			regfile_write_num_id_ex <= 0;
+			regfile_read_num1_syscall_id_ex <= 0;
+			regfile_read_num2_syscall_id_ex <= 0;
 		end
 		else if(nop_lock_id == 1'b0 && pc_bj == 1'b0) begin
 			SyscallSrc_id_ex <= SyscallSrc_id;
@@ -85,6 +91,8 @@ module id_ex(
 			MemtoReg_id_ex <= MemtoReg_id;
 			read_data2_id_ex <= read_data2_id;
 			regfile_write_num_id_ex <= regfile_write_num_id;
+			regfile_read_num1_syscall_id_ex <= regfile_read_num1_syscall_id;
+			regfile_read_num2_syscall_id_ex <= regfile_read_num2_syscall_id;
 		end
 		else begin
 			// insert bubble
@@ -106,6 +114,8 @@ module id_ex(
 			MemtoReg_id_ex <= 0;
 			read_data2_id_ex <= 0;
 			regfile_write_num_id_ex <= 0;
+			regfile_read_num1_syscall_id_ex <= 0;
+			regfile_read_num2_syscall_id_ex <= 0;
 		end
 	end
 

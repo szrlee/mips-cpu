@@ -22,6 +22,8 @@
 `include "ex_mem.sv"
 `include "mem_wb.sv"
 `include "data_dependence.sv"
+`include "bypass.sv"
+
 
 module CPU(
 	input wire clk,
@@ -72,6 +74,8 @@ module CPU(
 	// regfile
 	reg [4 : 0] regfile_read_num1_syscall_id = 1'b0;
 	reg [4 : 0] regfile_read_num2_syscall_id = 1'b0;
+	wire [4 : 0] regfile_read_num1_syscall_id_ex;
+	wire [4 : 0] regfile_read_num2_syscall_id_ex;
 	reg [4 : 0] regfile_write_num_id;
 	wire [4 : 0] regfile_write_num_id_ex, regfile_write_num_ex_mem, regfile_write_num_mem_wb;
 	wire [31 : 0] regfile_write_data_wb;
@@ -95,6 +99,8 @@ module CPU(
 	wire [31 : 0] ram_read_data_mem, ram_read_data_mem_wb;
 	// data denpendence
 	wire nop_lock_id;
+	// bypass
+	wire [31 : 0] bypass_data1_ex, bypass_data2_ex;
 	
 	always_comb begin
 		if(SyscallSrc_id == 1'b1) begin
@@ -114,12 +120,12 @@ module CPU(
 	end
 
 	// EX syscall's execution
-	assign halt_ex = SyscallSrc_id_ex == 1'b1 ? (regfile_read_data1_id_ex == 32'd10 ? 1'b1 : 1'b0) : 1'b0;
+	assign halt_ex = SyscallSrc_id_ex == 1'b1 ? (bypass_data1_ex == 32'd10 ? 1'b1 : 1'b0) : 1'b0;
 	always_ff @(posedge clk) begin 
 		rst <= 1'b0;
 		if(SyscallSrc_id_ex == 1'b1) begin
-			if(regfile_read_data1_id_ex == 32'd10) display_syscall <= display_syscall;
-			else display_syscall <= regfile_read_data2_id_ex;
+			if(bypass_data1_ex == 32'd10) display_syscall <= display_syscall;
+			else display_syscall <= bypass_data2_ex;
 		end
 		else display_syscall <= display_syscall;	
   	end
@@ -207,7 +213,7 @@ module CPU(
 		.MemWrite_id_ex          (MemWrite_id_ex),
 		.MemtoReg_id_ex          (MemtoReg_id_ex),
 		.alu_out_ex              (alu_out_ex),
-		.regfile_read_data2_id_ex(regfile_read_data2_id_ex),
+		.regfile_read_data2_id_ex(bypass_data2_ex),
 		.Jump_id_ex              (Jump_id_ex),
 		.pc_ex_mem               (pc_ex_mem),
 		.instruction_ex_mem      (instruction_ex_mem),
@@ -236,10 +242,11 @@ module CPU(
 		.regfile_read_num1_syscall_id(regfile_read_num1_syscall_id),
 		.regfile_read_num2_syscall_id(regfile_read_num2_syscall_id),
 		.regfile_write_num_id_ex     (regfile_write_num_id_ex),
-		.Jump_id                     (Jump_id),
 		.regfile_write_num_ex_mem    (regfile_write_num_ex_mem),
 		.nop_lock_id                 (nop_lock_id),
-		.clk                         (clk)
+		.clk                         (clk),
+		.MemRead_id_ex               (MemRead_id_ex),
+		.RegWrite_id_ex              (RegWrite_id_ex)
 		);
 
 	// ID -> EX
@@ -283,9 +290,29 @@ module CPU(
 		.regfile_write_num_id(regfile_write_num_id),
 		.regfile_write_num_id_ex(regfile_write_num_id_ex),
 		.nop_lock_id         (nop_lock_id),
-		.pc_bj               (pc_src_bj_ex)
+		.pc_bj               (pc_src_bj_ex),
+		.regfile_read_num1_syscall_id(regfile_read_num1_syscall_id),
+		.regfile_read_num2_syscall_id(regfile_read_num2_syscall_id),
+		.regfile_read_num1_syscall_id_ex(regfile_read_num1_syscall_id_ex),
+		.regfile_read_num2_syscall_id_ex(regfile_read_num2_syscall_id_ex)
 	);
 
+	bypass BYPASS_MOD(
+		.regfile_write_num_ex_mem       (regfile_write_num_ex_mem),
+		.regfile_write_num_mem_wb       (regfile_write_num_mem_wb),
+		.regfile_read_num1_syscall_id_ex(regfile_read_num1_syscall_id_ex),
+		.regfile_read_num2_syscall_id_ex(regfile_read_num2_syscall_id_ex),
+		.RegWrite_ex_mem                (RegWrite_ex_mem),
+		.RegWrite_mem_wb                (RegWrite_mem_wb),
+		.clk                            (clk),
+		.regfile_write_data_wb          (regfile_write_data_wb),
+		.alu_out_ex_mem                 (alu_out_ex_mem),
+		.regfile_read_data1_id_ex       (regfile_read_data1_id_ex),
+		.regfile_read_data2_id_ex       (regfile_read_data2_id_ex),
+		.bypass_data1_ex                (bypass_data1_ex),
+		.bypass_data2_ex                (bypass_data2_ex)
+	);
+	
 	// RegDst REGDST_MOD(JalSrc, RegDst, rt, rd,, regfile_write_num);
 	RegDst REGDST_MOD(
 		.Jump      (Jump_id),
@@ -354,8 +381,8 @@ module CPU(
 	// ALUSrc ALUSRC_MOD(AluSrc, regfile_read_data1, regfile_read_data2, ext_immidiate, shamt, alu_src_out1, alu_src_out2);
 	ALUSrc ALUSRC_MOD(
 		.AluSrc            (AluSrc_id_ex),
-		.regfile_read_data1(regfile_read_data1_id_ex),
-		.regfile_read_data2(regfile_read_data2_id_ex),
+		.regfile_read_data1(bypass_data1_ex),
+		.regfile_read_data2(bypass_data2_ex),
 		.ext_immidiate     (ext_immediate_id_ex),
 		.shamt             (shamt_id_ex),
 		.alu_src_out1      (alu_src_out1_ex),
