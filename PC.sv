@@ -4,12 +4,12 @@
 `include "def.vh"
 `timescale 1ns / 1ps
 
-module pc(
+module PC(
 	input wire clk, rst, halt, pc_bj, nop_lock_id,
 	input wire [31 : 0] pc_if_id,
 	input wire [31 : 0] pc_src_in,
 	output reg [31 : 0] out = 32'h0,
-	output reg [31 : 0] cycles_counter = 32'h0;
+	output reg [31 : 0] cycles_counter = 32'h0
     );
     
 	always_ff @(posedge clk) begin
