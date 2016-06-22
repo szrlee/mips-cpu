@@ -17,7 +17,7 @@ module Clk(
 		end
 		else begin
 			i <= i + 32'd1;
-			if(i == 32'd4999999) begin
+			if(i == 32'd499999) begin
 				i <= 32'd0;
 				clk_cpu <= ~clk_cpu;
 			end

@@ -4,32 +4,24 @@
 `include "def.vh"
 `timescale 1ns / 1ps
 
-module PC(
-	input wire clk,
-	input wire rst, halt, pc_bj,
-	input wire [`WORD_SIZE - 1 : 0] in,
-	output reg [`WORD_SIZE - 1 : 0] out = 32'h0,
-    output reg [31 : 0] cycles_counter = 32'd0
+module pc(
+	input wire clk, rst, halt, pc_bj, nop_lock_id,
+	input wire [31 : 0] pc_if_id,
+	input wire [31 : 0] pc_src_in,
+	output reg [31 : 0] out = 32'h0,
+	output reg [31 : 0] cycles_counter = 32'h0;
     );
     
 	always_ff @(posedge clk) begin
 		if(halt == 1'b0) cycles_counter = cycles_counter + 32'd1;
 	end
 
-	always_ff @(posedge clk) begin
-		if(rst == 1'b1) begin
-			out <= 32'h0; 
-		end
-		else if (halt == 1'b1) begin
-			// halt is 1
-			out <= out;
-		end 
-		else if(pc_bj == 1'b1) begin 
-			out <= in;
-		end
-		else begin
-			out <= out + 1'b1;
-		end
+	always_comb begin
+		if(rst == 1'b1) out <= 32'h0; 
+		else if(halt == 1'b1) out <= out;
+		else if(pc_bj == 1'b1) out <= pc_src_in;
+		else if(nop_lock_id == 1'b1) out <= out;
+		else out <= pc_if_id + 1;
 	end
 endmodule
 

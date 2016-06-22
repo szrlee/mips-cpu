@@ -21,6 +21,7 @@
 `include "id_ex.sv"
 `include "ex_mem.sv"
 `include "mem_wb.sv"
+`include "data_dependence.sv"
 
 module CPU(
 	input wire clk,
@@ -42,8 +43,8 @@ module CPU(
 	wire [5 : 0] opcode_id;
 	wire [5 : 0] funct_id, funct_id_ex;
 	wire [4 : 0] rs_id;
-	wire [4 : 0] rt_id, rt_id_ex, rt_ex_mem, rt_mem_wb;
-	wire [4 : 0] rd_id, rd_id_ex, rd_ex_mem, rd_mem_wb;
+	wire [4 : 0] rt_id;
+	wire [4 : 0] rd_id;
 	wire [4 : 0] shamt_id, shamt_id_ex;
 	wire [15 : 0] immediate_id;
 	wire [25 : 0] address_id, address_id_ex;
@@ -69,9 +70,10 @@ module CPU(
 	wire Debug_DM_en;
     wire [31 : 0] addr_in;
 	// regfile
-	reg [4 : 0] regfile_read_num1_syscall_id;
-	reg [4 : 0] regfile_read_num2_syscall_id;
-	wire [4 : 0] regfile_write_num_wb;
+	reg [4 : 0] regfile_read_num1_syscall_id = 1'b0;
+	reg [4 : 0] regfile_read_num2_syscall_id = 1'b0;
+	reg [4 : 0] regfile_write_num_id;
+	wire [4 : 0] regfile_write_num_id_ex, regfile_write_num_ex_mem, regfile_write_num_mem_wb;
 	wire [31 : 0] regfile_write_data_wb;
 	wire [31 : 0] regfile_read_data1_id, regfile_read_data1_id_ex;
 	wire [31 : 0] regfile_read_data2_id, regfile_read_data2_id_ex;
@@ -91,12 +93,14 @@ module CPU(
 	// ram
 	wire [31 : 0] ram_write_data_ex_mem;
 	wire [31 : 0] ram_read_data_mem, ram_read_data_mem_wb;
-
+	// data denpendence
+	wire nop_lock_id;
+	
 	always_comb begin
 		if(SyscallSrc_id == 1'b1) begin
 			regfile_read_num1_syscall_id = 5'd2;
 		end
-		else begin 
+		else begin
 			regfile_read_num1_syscall_id = rs_id;
 		end
 	end
@@ -104,7 +108,7 @@ module CPU(
 		if(SyscallSrc_id == 1'b1) begin
 			regfile_read_num2_syscall_id = 5'd4;
 		end
-		else begin 
+		else begin
 			regfile_read_num2_syscall_id = rt_id;
 		end
 	end
@@ -128,18 +132,41 @@ module CPU(
 
   	// EX display cycles & pc
   	assign display_led = {Debug_DM_en, cycles_counter[5 : 0], pc_if[7 : 0]};
-  	
+
+/*   	// judge which is wrote
+  	always_comb begin
+  		if(Jump_id == 2'b10) regfile_write_num_id = 5'd31;
+  		else if(RegDst_id == 1'b1) regfile_write_num_id = rd_id;
+  		else if(RegDst_id == 1'b0) regfile_write_num_id = rt_id;
+  		else regfile_write_num_id = 5'dz;
+  	end */
+	
 	// IF
 	PC PC_MOD(
-		.clk 	(clk),
+		.clk	(clk),
 		.rst 	(rst),
 		.halt	(halt_ex),
-		.in		(pc_src_out_ex),
+		.pc_src_in		(pc_src_out_ex),
 		.out	(pc_if),
 		.pc_bj 	(pc_src_bj_ex),
+		.pc_if_id   (pc_if_id),
+		.nop_lock_id(nop_lock_id),
 		.cycles_counter (cycles_counter)
 	);
 
+	// PCSrc PCSRC_MOD(Branch, Jump, Equal, pc_out, ext_immidiate, address, regfile_read_data1, pc_src_out);
+	PCSrc PCSRC_MOD(
+		.Branch   (Branch_id_ex),
+		.Jump     (Jump_id_ex),
+		.Equal    (alu_equal_ex),
+		.in_pc    (pc_id_ex),
+		.in_branch(ext_immediate_id_ex),
+		.in_j     (address_id_ex),
+		.in_jr    (regfile_read_data1_id_ex),
+		.out      (pc_src_out_ex),
+		.pc_bj    (pc_src_bj_ex)
+	);
+	
 	// IM IF
 	IM IM_MOD(
 		.pc_if    		(pc_if),
@@ -152,7 +179,9 @@ module CPU(
 		.instruction_if		(instruction_if),
 		.pc_if				(pc_if),
 		.instruction_if_id	(instruction_if_id),
-		.pc_if_id			(pc_if_id)
+		.pc_if_id			(pc_if_id),
+		.nop_lock_id      	(nop_lock_id),
+		.pc_bj         		(pc_src_bj_ex)
 	);	
 
 	ID ID_MOD(
@@ -167,18 +196,6 @@ module CPU(
 		.address          (address_id)
 	);
 	
-	// PCSrc PCSRC_MOD(Branch, Jump, Equal, pc_out, ext_immidiate, address, regfile_read_data1, pc_src_out);
-	PCSrc PCSRC_MOD(
-		.Branch   (Branch_id_ex),
-		.Jump     (Jump_id_ex),
-		.Equal    (alu_equal_ex),
-		.in_pc    (pc_id_ex),
-		.in_branch(ext_immediate_id_ex),
-		.in_j     (address_id_ex),
-		.in_jr    (regfile_read_data1_id_ex),
-		.out      (pc_src_out_ex),
-		.pc_bj    (pc_src_bj_ex)
-	);
 
 	// EX -> MEM
 	ex_mem EX_MEM_MOD(
@@ -186,14 +203,11 @@ module CPU(
 		.pc_id_ex                (pc_id_ex),
 		.instruction_id_ex       (instruction_id_ex),
 		.RegWrite_id_ex          (RegWrite_id_ex),
-		.RegDst_id_ex            (RegDst_id_ex),
 		.MemRead_id_ex           (MemRead_id_ex),
 		.MemWrite_id_ex          (MemWrite_id_ex),
 		.MemtoReg_id_ex          (MemtoReg_id_ex),
 		.alu_out_ex              (alu_out_ex),
 		.regfile_read_data2_id_ex(regfile_read_data2_id_ex),
-		.rt_id_ex                (rt_id_ex),
-		.rd_id_ex                (rd_id_ex),
 		.Jump_id_ex              (Jump_id_ex),
 		.pc_ex_mem               (pc_ex_mem),
 		.instruction_ex_mem      (instruction_ex_mem),
@@ -205,10 +219,10 @@ module CPU(
 		.Jump_ex_mem             (Jump_ex_mem),
 		.alu_out_ex_mem          (alu_out_ex_mem),
 		.ram_write_data_ex_mem   (ram_write_data_ex_mem),
-		.rt_ex_mem               (rt_ex_mem),
-		.rd_ex_mem               (rd_ex_mem),
 		.halt_ex                 (halt_ex),
-		.halt_ex_mem             (halt_ex_mem)
+		.halt_ex_mem             (halt_ex_mem),
+		.regfile_write_num_id_ex (regfile_write_num_id_ex),
+		.regfile_write_num_ex_mem(regfile_write_num_ex_mem)
 	);
   	
 	// Ext EXT(immediate, ONEBIT_true, ext_immidiate);
@@ -217,6 +231,16 @@ module CPU(
 		.ExtOp (ExtOp_id),
 		.out (ext_immediate_id)
 	);
+	
+	data_dependence DATA_DEPENDENCE_MOD(
+		.regfile_read_num1_syscall_id(regfile_read_num1_syscall_id),
+		.regfile_read_num2_syscall_id(regfile_read_num2_syscall_id),
+		.regfile_write_num_id_ex     (regfile_write_num_id_ex),
+		.Jump_id                     (Jump_id),
+		.regfile_write_num_ex_mem    (regfile_write_num_ex_mem),
+		.nop_lock_id                 (nop_lock_id),
+		.clk                         (clk)
+		);
 
 	// ID -> EX
 	id_ex ID_EX_MOD(
@@ -230,7 +254,6 @@ module CPU(
 		.Jump_id            (Jump_id),
 		.AluSrc_id          (AluSrc_id),
 		.AluOp_id           (AluOp_id),
-		.RegDst_id          (RegDst_id),
 		.RegWrite_id        (RegWrite_id),
 		.MemRead_id         (MemRead_id),
 		.MemWrite_id        (MemWrite_id),
@@ -247,7 +270,6 @@ module CPU(
 		.Jump_id_ex         (Jump_id_ex),
 		.AluSrc_id_ex       (AluSrc_id_ex),
 		.AluOp_id_ex        (AluOp_id_ex),
-		.RegDst_id_ex       (RegDst_id_ex),
 		.RegWrite_id_ex     (RegWrite_id_ex),
 		.MemRead_id_ex      (MemRead_id_ex),
 		.MemWrite_id_ex     (MemWrite_id_ex),
@@ -257,20 +279,20 @@ module CPU(
 		.read_data2_id_ex   (regfile_read_data2_id_ex),
 		.instruction_if_id  (instruction_if_id),
 		.instruction_id_ex  (instruction_id_ex),
-		.rt_id              (rt_id),
-		.rd_id              (rd_id),
-		.rt_id_ex           (rt_id_ex),
-		.rd_id_ex           (rd_id_ex),
-		.halt_ex            (halt_ex)
+		.halt_ex            (halt_ex),
+		.regfile_write_num_id(regfile_write_num_id),
+		.regfile_write_num_id_ex(regfile_write_num_id_ex),
+		.nop_lock_id         (nop_lock_id),
+		.pc_bj               (pc_src_bj_ex)
 	);
 
 	// RegDst REGDST_MOD(JalSrc, RegDst, rt, rd,, regfile_write_num);
 	RegDst REGDST_MOD(
-		.Jump      (Jump_mem_wb),
-		.RegDst    (RegDst_mem_wb),
-		.rt_num    (rt_mem_wb),
-		.rd_num    (rd_mem_wb),
-		.write_num (regfile_write_num_wb)
+		.Jump      (Jump_id),
+		.RegDst    (RegDst_id),
+		.rt_num    (rt_id),
+		.rd_num    (rd_id),
+		.write_num (regfile_write_num_id)
 	);
 		
 	// RegWrData REGWRDATA_MOD(JalSrc, RegDst, rt, rd,, regfile_write_num);
@@ -306,7 +328,7 @@ module CPU(
 		.clk       (clk),
 		.read_num1 (regfile_read_num1_syscall_id),
 		.read_num2 (regfile_read_num2_syscall_id),
-		.write_num (regfile_write_num_wb),
+		.write_num (regfile_write_num_mem_wb),
 		.write_en  (RegWrite_mem_wb),
 		.write_data(regfile_write_data_wb),
 		.read_data1(regfile_read_data1_id),
@@ -368,25 +390,21 @@ module CPU(
 		.pc_ex_mem           (pc_ex_mem),
 		.instruction_ex_mem  (instruction_ex_mem),
 		.MemtoReg_ex_mem     (MemtoReg_ex_mem),
-		.rt_ex_mem           (rt_ex_mem),
-		.rd_ex_mem           (rd_ex_mem),
 		.Jump_ex_mem         (Jump_ex_mem),
 		.alu_out_ex_mem      (alu_out_ex_mem),
 		.ram_read_data_mem   (ram_read_data_mem),
-		.RegDst_ex_mem       (RegDst_ex_mem),
 		.RegWrite_ex_mem     (RegWrite_ex_mem),
 		.pc_mem_wb           (pc_mem_wb),
 		.instruction_mem_wb  (instruction_mem_wb),
 		.MemtoReg_mem_wb     (MemtoReg_mem_wb),
 		.Jump_mem_wb         (Jump_mem_wb),
-		.rt_mem_wb           (rt_mem_wb),
-		.rd_mem_wb           (rd_mem_wb),
 		.alu_out_mem_wb      (alu_out_mem_wb),
 		.ram_read_data_mem_wb(ram_read_data_mem_wb),
-		.RegDst_mem_wb       (RegDst_mem_wb),
 		.RegWrite_mem_wb     (RegWrite_mem_wb),
 		.halt_ex_mem         (halt_ex_mem),
-		.halt_mem_wb         (halt_mem_wb)
+		.halt_mem_wb         (halt_mem_wb),
+		.regfile_write_num_ex_mem(regfile_write_num_ex_mem),
+		.regfile_write_num_mem_wb(regfile_write_num_mem_wb)
 	);
 		
 endmodule
