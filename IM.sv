@@ -11,7 +11,7 @@ module IM(
 	wire [7 : 0] num;
 	reg [31 : 0] data [255 : 0];
 	initial begin
-		$readmemh("benchmark.txt", data, 0, 255);
+		$readmemh("pipeline_test.txt", data, 0, 255);
 	end
 	
 	assign num = pc_if[7 : 0];
