@@ -133,7 +133,7 @@ module CPU(
 	PC PC_MOD(
 		.clk 	(clk),
 		.rst 	(rst),
-		.halt	(halt_ex),
+		.halt	(halt_mem_wb),
 		.in		(pc_src_out_ex),
 		.out	(pc_if),
 		.pc_bj 	(pc_src_bj_ex),
