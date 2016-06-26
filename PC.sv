@@ -16,6 +16,23 @@ module PC(
 		if(halt == 1'b0) cycles_counter = cycles_counter + 32'd1;
 	end
 
+//	always_ff @(posedge clk) begin
+//		if(rst == 1'b1) begin
+//			out <= 32'h0; 
+//		end
+//		else if(halt == 1'b1) begin
+//			// halt is 1
+//			out <= out;
+//		end
+//		else if(pc_bj == 1'b1) begin
+//            out <= pc_src_in;
+//        end
+//        else if(nop_lock_id == 1'b0) begin
+//			out <= out + 1'b1;
+//		end 
+//		else out <= out;
+//	end
+
 	always_comb begin
 		if(rst == 1'b1) out <= 32'h0; 
 		else if(halt == 1'b1) out <= out;
